@@ -3,27 +3,27 @@
         <el-aside style="padding-right: 20px;">
             <el-form v-model="options" :label-position="labelPosition" label-width="80px">
                 <el-form-item label="端口">
-                    <el-select v-model="options.com" placeholder="请选择">
+                    <el-select v-model="options.com" :disabled="isOpen" placeholder="请选择">
                         <el-option v-for="com in comList" :label="com.label" :value="com.value" :key="com.value"></el-option>
                     </el-select>
                 </el-form-item>
                 <el-form-item label="波特率">
-                    <el-select v-model="options.baudRate" placeholder="请选择">
+                    <el-select v-model="options.baudRate" :disabled="isOpen" placeholder="请选择">
                         <el-option v-for="baudRate in baudRateList" :label="baudRate.label" :value="baudRate.value" :key="baudRate.value"></el-option>
                     </el-select>
                 </el-form-item>
                 <el-form-item label="校验位">
-                    <el-select v-model="options.parityBit" placeholder="请选择">
-                        <el-option v-for="parityBit in parityBitList" :label="parityBit.label" :value="parityBit.value" :key="parityBit.value"></el-option>
+                    <el-select v-model="options.parity" :disabled="isOpen" placeholder="请选择">
+                        <el-option v-for="parity in parityList" :label="parity.label" :value="parity.value" :key="parity.value"></el-option>
                     </el-select>
                 </el-form-item>
                 <el-form-item label="数据位">
-                    <el-select v-model="options.dataBit" placeholder="请选择">
+                    <el-select v-model="options.dataBit" :disabled="isOpen" placeholder="请选择">
                         <el-option v-for="dataBit in dataBitList" :label="dataBit.label" :value="dataBit.value" :key="dataBit.value"></el-option>
                     </el-select>
                 </el-form-item>
                 <el-form-item label="停止位">
-                    <el-select v-model="options.stopBit" placeholder="请选择">
+                    <el-select v-model="options.stopBit" :disabled="isOpen" placeholder="请选择">
                         <el-option v-for="stopBit in stopBitList" :label="stopBit.label" :value="stopBit.value" :key="stopBit.value"></el-option>
                     </el-select>
                 </el-form-item>
@@ -95,8 +95,8 @@
                     <el-input type="textarea" v-model="com.pushData" :rows="9"></el-input>
                 </el-form-item>
                 <el-form-item style="text-align: right;">
-                    <el-button>清空重填</el-button>
-                    <el-button>手动发送</el-button>
+                    <el-button @click="resetPushData">清空重填</el-button>
+                    <el-button @click="portWrite">手动发送</el-button>
                     <el-button>计数清零</el-button>
                 </el-form-item>
                 <el-form-item>
@@ -110,10 +110,13 @@
 </template>
 
 <script>
+import Vue from 'vue'
 export default {
     name: 'Main',
     data() {
         return {
+            port: null,
+            isOpen: false,
             labelPosition: 'right',
             com: {
                 state: 0,
@@ -130,45 +133,13 @@ export default {
             autoSend: false,
             hexSend: false,
             options: {
-                com: 'COM1',
-                baudRate: 115200,
-                parityBit: 'None',
+                com: '',
+                baudRate: 9600,
+                parity: 'none',
                 dataBit: 8,
                 stopBit: 1
             },
             comList: [
-                {
-                    label: 'COM1',
-                    value: 'COM1'
-                },
-                {
-                    label: 'COM2',
-                    value: 'COM2'
-                },
-                {
-                    label: 'COM3',
-                    value: 'COM3'
-                },
-                {
-                    label: 'COM4',
-                    value: 'COM4'
-                },
-                {
-                    label: 'COM5',
-                    value: 'COM5'
-                },
-                {
-                    label: 'COM6',
-                    value: 'COM6'
-                },
-                {
-                    label: 'COM7',
-                    value: 'COM7'
-                },
-                {
-                    label: 'COM8',
-                    value: 'COM8'
-                }
             ],
             baudRateList: [
                 {
@@ -236,26 +207,26 @@ export default {
                     value: 460800
                 }
             ],
-            parityBitList: [
+            parityList: [
                 {
                     label: 'None',
-                    value: 'None'
+                    value: 'none'
                 },
                 {
                     label: 'Odd',
-                    value: 'Odd'
+                    value: 'odd'
                 },
                 {
                     label: 'Even',
-                    value: 'Even'
+                    value: 'even'
                 },
                 {
                     label: 'Mark',
-                    value: 'Mark'
+                    value: 'mark'
                 },
                 {
                     label: 'Space',
-                    value: 'Space'
+                    value: 'space'
                 }
             ],
             dataBitList: [
@@ -294,16 +265,93 @@ export default {
     },
     methods: {
         openCom() {
-            let com = this.com;
-            com.state = 1;
-            this.$set(this, 'com', com);
-            this.$set(this, 'stateText', '串口已开启');
+            let _ts = this
+            let port = _ts.port;
+            if (port) {
+                try {
+                    port.close();
+                } catch (e) {
+                    _ts.$set(_ts, 'stateText', e);
+                    console.log(e);
+                }
+            }
+            let options = _ts.options;
+            port = new Vue.SerialPort(options.com, {
+                baudRate: options.baudRate,
+                parity: options.parity,
+                dataBits: options.dataBit,
+                stopBits: options.stopBit,
+                autoOpen: false
+            })
+
+            port.open(function (err) {
+                if (err) {
+                    _ts.$set(_ts, 'stateText', err);
+                    new Notification('Nebula Helper', {
+                        body: err
+                    })
+                    return console.log('Error opening port: ', err)
+                }
+                // Because there's no callback to write, write errors will be emitted on the port:
+                let com = _ts.com;
+                com.state = 1;
+                _ts.$set(_ts, 'com', com);
+                _ts.$set(_ts, 'stateText', '串口已开启');
+                _ts.$set(_ts, 'isOpen', true);
+                _ts.$set(_ts, 'port', port);
+            })
+
+            // The open event is always emitted
+            port.on('open', function() {
+                // open logic
+                console.log('打开中...');
+                console.log('串口打开状态', port.isOpen);
+            })
+
+            port.on('error', (error) => {
+                //捕获错误
+                new Notification('Nebula Helper', {
+                    body: error
+                })
+                _ts.$set(_ts, 'stateText', error);
+                console.log('Error: ', error);
+            })
+            port.on('readable', function () {
+                console.log('Data:', port.read())
+            })
+            //串口设备传来的数据 是buffer对象，用toString转一下码
+            port.on('data', function (data) {
+                let com = _ts.com;
+                com.pullData = com.pullData + ' ' + data.toString()
+                _ts.$set(_ts, 'com', com);
+                console.log(data, data.toString());
+            })
         },
         closeCom() {
-            let com = this.com;
-            com.state = 0;
-            this.$set(this, 'com', com);
-            this.$set(this, 'stateText', '串口已关闭');
+            let _ts = this
+            let port = _ts.port;
+            if (port) {
+                try {
+                    port.close();
+                    let com = _ts.com;
+                    com.state = 0;
+                    _ts.$set(_ts, 'com', com);
+                    _ts.$set(_ts, 'isOpen', false);
+                    _ts.$set(_ts, 'stateText', '串口已关闭');
+                    console.log('关闭中...');
+                    console.log('串口打开状态', port.isOpen);
+                } catch (e) {
+                    _ts.$set(_ts, 'stateText', e);
+                    console.log(e);
+                }
+            }
+        },
+        portWrite() {
+            let _ts = this
+            let port = _ts.port;
+            if (port && port.isOpen) {
+                port.write(_ts.com.pushData)
+            }
         },
         handleExceed(files) {
             let fileList = [{
@@ -314,7 +362,72 @@ export default {
             this.$set(this, 'fileList', fileList);
         },
         handleBeforeUpload(file, fileList) {
-            this.$set(this, 'fileList', fileList)
+            this.$set(this, 'fileList', fileList);
+        },
+        genPorts () {
+            let _ts = this;
+            let remote = window.electron.remote;
+            const SerialPort = remote.getGlobal('SerialPort');
+            Vue.SerialPort = Vue.prototype.$SerialPort = SerialPort;
+            SerialPort.list().then(
+                ports => {
+                    let comList = new Array();
+                    for (let i in ports) {
+                        let port = {
+                            label: ports[i].path,
+                            value: ports[i].path
+                        }
+                        comList.push(port)
+                    }
+                    if (comList) {
+                        _ts.$set(_ts, 'stateText', '初始化成功')
+                    } else {
+                        _ts.$set(_ts, 'stateText', '初始化失败')
+                    }
+                    comList.sort(function (e1, e2) {
+                        let s1 = Number(e1.value.replace('COM', ''));
+                        let s2 = Number(e2.value.replace('COM', ''));
+                        return s1 -s2
+                    });
+                    if (comList) {
+                        let options = _ts.options
+                        options.com = comList[0].value
+                        _ts.$set(_ts, 'options', options)
+                    }
+                    _ts.$set(_ts, 'comList', comList)
+                },
+                err => console.error(err)
+            )
+        },
+        resetPushData() {
+            window.electron.remote.getCurrentWindow().minimize();
+        }
+    },
+    mounted() {
+        let _ts =  this
+        if(window.WebSocket){
+            let ws = new WebSocket('ws://127.0.0.1:27611');
+
+            ws.onopen = function(e){
+                console.log("连接服务器成功", e);
+                ws.send("HeartBeat");
+            }
+
+            ws.onclose = function(e){
+                console.log("服务器关闭", e);
+            }
+
+            ws.onerror = function(){
+                console.log("连接出错");
+            }
+
+            ws.onmessage = function(e){
+                console.log(e.data);
+                if (e.data === "HeartBeat") {
+                    console.log('客户端接收能力正常');
+                    _ts.genPorts()
+                }
+            }
         }
     }
 }

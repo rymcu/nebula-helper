@@ -4,7 +4,36 @@ import { app, protocol, BrowserWindow } from 'electron'
 import { createProtocol } from 'vue-cli-plugin-electron-builder/lib'
 import installExtension, { VUEJS_DEVTOOLS } from 'electron-devtools-installer'
 const isDevelopment = process.env.NODE_ENV !== 'production'
+const WebSocket = require('ws');
+// 引用Server类:
+const WebSocketServer = WebSocket.Server;
+let wss    //webSocket Server
+const serialPort = require('serialport')
 
+function startPort() {
+  if (wss) {
+    wss.close()
+  }
+  // 实例化: 监听本机的27611端口 127.0.0.1:27611
+  wss = new WebSocketServer({
+    port: 27611
+  });
+
+  wss.on('connection', function (ws) {
+    console.log("开启连结")
+    ws.on("message", function (message) {
+      console.log('接受到的信息' + message);
+      console.log('服务端接收能力正常');
+      if (message === "HeartBeat") {
+        ws.send("HeartBeat")
+      }
+    })
+    ws.on("close", function () {
+      console.log("关闭服务");
+    })
+  })
+}
+startPort()
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let win
@@ -13,6 +42,10 @@ let win
 protocol.registerSchemesAsPrivileged([
   { scheme: 'app', privileges: { secure: true, standard: true } }
 ])
+
+process.on('unhandledRejection', (error) => {
+  console.error(error)
+})
 
 function createWindow() {
   // Create the browser window.
@@ -23,7 +56,8 @@ function createWindow() {
       // Use pluginOptions.nodeIntegration, leave this alone
       // See nklayman.github.io/vue-cli-plugin-electron-builder/guide/security.html#node-integration for more info
       // nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION
-      nodeIntegration: true
+      nodeIntegration: true,
+      nodeIntegrationInWorker: true
     }
   })
 
@@ -71,6 +105,7 @@ app.on('ready', async () => {
       console.error('Vue Devtools failed to install:', e.toString())
     }
   }
+  global.SerialPort = serialPort
   createWindow()
 })
 
