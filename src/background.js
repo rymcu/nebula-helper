@@ -8,7 +8,10 @@ const WebSocket = require('ws');
 // 引用Server类:
 const WebSocketServer = WebSocket.Server;
 let wss    //webSocket Server
-const serialPort = require('serialport')
+const serialPort = require('serialport');
+
+const log = require('electron-log')
+console.log = log.log
 
 function startPort() {
   if (wss) {
@@ -105,7 +108,7 @@ app.on('ready', async () => {
       console.error('Vue Devtools failed to install:', e.toString())
     }
   }
-  global.SerialPort = serialPort
+  global.SerialPort = serialPort;
   createWindow()
 })
 

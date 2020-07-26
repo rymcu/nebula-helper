@@ -115,6 +115,7 @@ export default {
     name: 'Main',
     data() {
         return {
+            buffer: new Buffer(''),
             port: null,
             isOpen: false,
             labelPosition: 'right',
@@ -263,6 +264,12 @@ export default {
             ]
         }
     },
+    watch: {
+        buffer(oldBuffer, newBuffer) {
+            console.log(oldBuffer.toString())
+            console.log(newBuffer.toString())
+        }
+    },
     methods: {
         openCom() {
             let _ts = this
@@ -316,15 +323,12 @@ export default {
                 _ts.$set(_ts, 'stateText', error);
                 console.log('Error: ', error);
             })
-            port.on('readable', function () {
-                console.log('Data:', port.read())
-            })
-            //串口设备传来的数据 是buffer对象，用toString转一下码
+            // 串口设备传来的数据 是buffer对象，用toString转一下码
             port.on('data', function (data) {
                 let com = _ts.com;
-                com.pullData = com.pullData + ' ' + data.toString()
+                let pullData = data.toString();
+                com.pullData = com.pullData + ' ' + pullData
                 _ts.$set(_ts, 'com', com);
-                console.log(data, data.toString());
             })
         },
         closeCom() {
@@ -350,7 +354,20 @@ export default {
             let _ts = this
             let port = _ts.port;
             if (port && port.isOpen) {
-                port.write(_ts.com.pushData)
+                port.write(_ts.com.pushData, 'utf-8', function (err, result) {
+                    if (err) {
+                        console.log('Error while sending message : ' + err);
+                    }
+                    if (result) {
+                        console.log('Response received after sending message : ' + result);
+                    }
+                    console.log('message written');
+                })
+                port.drain(error=>{
+                    if (error) {
+                        console.log(error)
+                    }
+                })
             }
         },
         handleExceed(files) {

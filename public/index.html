@@ -15,7 +15,15 @@
     <!-- built files will be auto injected -->
   </body>
   <script>
-    const electron = require('electron');
-    window.electron = electron
+    window.electron = require('electron')
+
+    try {
+      const iconv = require('iconv-lite');
+      window.iconv = iconv
+      const log = require('electron-log')
+      console.log = log.log
+    } catch (e) {
+      console.log(e)
+    }
   </script>
 </html>
