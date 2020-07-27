@@ -5,6 +5,7 @@
 - [ ] 文件传输
 - [ ] 自动发送信息
 - [ ] 16 进制收发信息
+- [ ] 版本更新/及时获取最新功能
 ## 开发指南
 > 本项目使用 Electron + Vue + Node-serialport 实现，以下步骤是 windows 操作系统环境配置步骤，1-5 步为安装 node-gyp ,其他操作系统请参考[官方教程](https://github.com/nodejs/node-gyp)
 1. 安装 LTS 版 NodeJS
