@@ -10,7 +10,7 @@
     "electron:serve": "vue-cli-service electron:serve",
     "postinstall": "electron-builder install-app-deps",
     "postuninstall": "electron-builder install-app-deps",
-    "install": "electron-rebuild -d=https://gh-contractor-zcbenz.cnpmjs.org/atom-shell/dist/"
+    "install": "npm rebuild --runtime=electron --target=8.4.0 --disturl=https://npm.taobao.org/mirrors/atom-shell --abi=76"
   },
   "author": {
     "name": "ronger",
@@ -35,7 +35,6 @@
     "babel-eslint": "^10.1.0",
     "electron": "^8.4.0",
     "electron-devtools-installer": "^3.1.0",
-    "electron-rebuild": "^1.11.0",
     "eslint": "^6.7.2",
     "eslint-plugin-vue": "^6.2.2",
     "vue-cli-plugin-electron-builder": "^2.0.0-rc.4",
