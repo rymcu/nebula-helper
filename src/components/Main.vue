@@ -52,10 +52,11 @@
             <el-form>
                 <el-form-item>
                     <el-col :span="12">
-                        <el-button>清空接收区</el-button>
+                        <el-button @click="resetPullData">清空接收区</el-button>
                     </el-col>
                     <el-col :span="12">
-                        <el-button>停止显示</el-button>
+                        <el-button v-if="isShowPullDate" @click="updateShowPullDate">停止显示</el-button>
+                        <el-button v-else @click="updateShowPullDate">恢复显示</el-button>
                     </el-col>
                 </el-form-item>
                 <el-form-item>
@@ -74,7 +75,7 @@
                         <template slot="prepend">自动发送周期</template>
                         <template slot="append">毫秒</template>
                     </el-input>
-                    <el-checkbox v-model="autoSend">自动发送</el-checkbox>
+                    <el-checkbox v-model="autoSend" @change="autoSendData">自动发送</el-checkbox>
                     <el-checkbox v-model="hexSend">十六进制发送</el-checkbox>
                     <el-upload
                             class="upload-demo"
@@ -94,7 +95,7 @@
         <el-main style="padding: 0 20px 0 0;">
             <el-form v-model="com">
                 <el-form-item>
-                    <el-input type="textarea" v-model="pullData" :rows="16" readonly></el-input>
+                    <el-input id="pullDta" type="textarea" v-model="pullData" :autosize="{ minRows: 16, maxRows: 16}" readonly></el-input>
                 </el-form-item>
                 <el-form-item>
                     <el-input type="textarea" v-model="pushData" :rows="9"></el-input>
@@ -102,7 +103,7 @@
                 <el-form-item style="text-align: right;">
                     <el-button @click="resetPushData">清空重填</el-button>
                     <el-button @click="portWrite">手动发送</el-button>
-                    <el-button>计数清零</el-button>
+                    <el-button @click="resetCountBit">计数清零</el-button>
                 </el-form-item>
                 <el-form-item>
                     <el-button type="text" style="margin-right: 5rem;"><span style="color: red;">{{stateText}}</span>
@@ -126,9 +127,11 @@
         name: 'Main',
         data() {
             return {
+                timer: null,
                 buffer: new Buffer(''),
                 port: null,
                 isOpen: false,
+                isShowPullDate: true,
                 labelPosition: 'right',
                 state: 0,
                 com: '',
@@ -320,12 +323,27 @@
                 })
                 // 串口设备传来的数据 是buffer对象，用toString转一下码
                 port.on('data', function (data) {
-                    let encoding = 'utf-8';
-                    if (_ts.isGbk) {
-                        encoding = 'gbk';
+                    // 判断是否显示接收的数据
+                    if (_ts.isShowPullDate) {
+                        let pullData;
+                        if (_ts.isGbk) {
+                            let encoding = 'gbk';
+                            pullData = window.iconv.decode(data, encoding);
+                        } else {
+                            if (_ts.hexDisplay) {
+                                pullData = _ts.strToBinary(data.toString(), 16);
+                            } else {
+                                pullData = data.toString();
+                            }
+                        }
+                        _ts.$set(_ts, 'pullData', _ts.pullData + pullData);
+                        // 接收字节数
+                        _ts.$set(_ts, 'pullBit', _ts.pullBit + pullData.length);
+                        setTimeout(function () {
+                            let pullDataElement = document.getElementById('pullDta');
+                            pullDataElement.scrollTop = pullDataElement.scrollHeight;
+                        }, 400);
                     }
-                    let pullData = window.iconv.decode(data, encoding);
-                    _ts.$set(_ts, 'pullData', _ts.pullData + pullData);
                 })
             },
             closeCom() {
@@ -348,14 +366,20 @@
             portWrite() {
                 let _ts = this
                 let port = _ts.port;
-                if (port && port.isOpen) {
-                    port.write(_ts.pushData, 'utf-8', function (err, result) {
+                if (port && port.isOpen && _ts.pushData) {
+                    let encoding = 'utf-8';
+                    if (_ts.hexSend) {
+                        encoding = 'hex';
+                    }
+                    port.write(_ts.pushData, encoding, function (err, result) {
                         if (err) {
                             console.log('Error while sending message : ' + err);
                         }
                         if (result) {
                             console.log('Response received after sending message : ' + result);
                         }
+                        // 接收字节数
+                        _ts.$set(_ts, 'pushBit', _ts.pushBit + _ts.pushData.length);
                         console.log('message written');
                     })
                     port.drain(error => {
@@ -410,7 +434,24 @@
                 )
             },
             resetPushData() {
-                window.electron.remote.getCurrentWindow().minimize();
+                this.$set(this, 'pushData', '');
+            },
+            resetPullData() {
+                this.$set(this, 'pullData', '');
+            },
+            updateShowPullDate() {
+                this.$set(this, 'isShowPullDate', !this.isShowPullDate)
+            },
+            autoSendData(val) {
+                let _ts = this;
+                if (_ts.timer) {
+                    window.clearInterval(_ts.timer);
+                }
+                if (val) {
+                    _ts.timer = setInterval(function () {
+                        _ts.portWrite();
+                    }, _ts.autoSendRate);
+                }
             },
             strToBinary(str, binary){
                 let result = [];
@@ -424,14 +465,14 @@
                     result.push(data);
                 }
                 return result.join("");
+            },
+            resetCountBit() {
+                this.$set(this, 'pushBit', 0);
+                this.$set(this, 'pullBit', 0);
             }
         },
         mounted() {
             let _ts = this;
-            let data = '中文转换';
-            console.log(_ts.strToBinary(data, 2));
-            console.log(_ts.strToBinary(data, 10));
-            console.log(_ts.strToBinary(data, 16));
             if (window.WebSocket) {
                 let ws = new WebSocket('ws://127.0.0.1:27611');
 
