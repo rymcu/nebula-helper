@@ -404,6 +404,8 @@
                 let _ts = this;
                 let remote = window.electron.remote;
                 const SerialPort = remote.getGlobal('SerialPort');
+                window.icovn = remote.getGlobal('icovn');
+                console.log = remote.getGlobal('log');
                 Vue.SerialPort = Vue.prototype.$SerialPort = SerialPort;
                 SerialPort.list().then(
                     ports => {

@@ -9,6 +9,7 @@ const WebSocket = require('ws');
 const WebSocketServer = WebSocket.Server;
 let wss;    //webSocket Server
 const serialPort = require('serialport');
+const icovn = require('iconv-lite');
 
 const log = require('electron-log')
 console.log = log.log
@@ -109,6 +110,8 @@ app.on('ready', async () => {
     }
   }
   global.SerialPort = serialPort;
+  global.icovn = icovn;
+  global.log = log.log;
   createWindow()
 })
 
