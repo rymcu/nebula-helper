@@ -123,7 +123,6 @@
                 com: '',    // 串口路径 COM1
                 pullData: '',   // 接收到的数据
                 pushData: '',   // 发送的数据
-                readFilePath: '',   // 读取文件路径
                 stateText: '准备就绪',  // 状态提示
                 pushBit: 0, // 发送字节数
                 pullBit: 0, // 接收字节数
@@ -266,7 +265,7 @@
             openCom() {
                 let _ts = this
                 let port = _ts.port;
-                if (port) {
+                if (port && port.isOpen) {
                     try {
                         port.close();
                     } catch (e) {
@@ -311,16 +310,17 @@
                     // 判断是否显示接收的数据
                     if (_ts.isShowPullDate) {
                         let pullData;
-                        if (_ts.isGBK(data)) {
-                            let encoding = 'GB2312';
-                            pullData = window.iconv.decode(data, encoding);
+                        if (_ts.hexDisplay) {
+                            pullData = _ts.strToBinary(data.toString(), 16).toLocaleUpperCase();
                         } else {
-                            if (_ts.hexDisplay) {
-                                pullData = _ts.strToBinary(data.toString(), 16);
+                            if (_ts.isGBK(data)) {
+                                let encoding = 'GB2312';
+                                pullData = window.iconv.decode(data, encoding);
                             } else {
                                 pullData = data.toString();
                             }
                         }
+
                         _ts.$set(_ts, 'pullData', _ts.pullData + pullData);
                         // 接收字节数
                         _ts.$set(_ts, 'pullBit', _ts.pullBit + pullData.length);
@@ -334,7 +334,7 @@
             closeCom() {
                 let _ts = this
                 let port = _ts.port;
-                if (port) {
+                if (port && port.isOpen) {
                     try {
                         port.close();
                         _ts.$set(_ts, 'state', 0);
@@ -380,13 +380,7 @@
             },
             genPorts() {
                 let _ts = this;
-                let remote = window.electron.remote;
-                const SerialPort = remote.getGlobal('SerialPort');
-                window.iconv = remote.getGlobal('iconv');
-                window.fs = remote.getGlobal('fs');
-                console.log = remote.getGlobal('log');
-                Vue.SerialPort = Vue.prototype.$SerialPort = SerialPort;
-                SerialPort.list().then(
+                Vue.SerialPort.list().then(
                     ports => {
                         let portList = new Array();
                         for (let i in ports) {
@@ -413,6 +407,32 @@
                     },
                     err => console.error(err)
                 )
+            },
+            genRenderer() {
+                let _ts = this;
+                let ipcRenderer = window.electron.ipcRenderer;
+                ipcRenderer.on('saveOptions', (event) => {
+                    if (event) {
+                        _ts.saveOptions();
+                    }
+                });
+                ipcRenderer.on('loadOptions', (event) => {
+                    if (event) {
+                        _ts.loadOptions();
+                    }
+                });
+                ipcRenderer.on('reloadPorts', (event) => {
+                    if (event) {
+                        _ts.genPorts();
+                    }
+                });
+                let remote = window.electron.remote;
+                const SerialPort = remote.getGlobal('SerialPort');
+                window.iconv = remote.getGlobal('iconv');
+                window.fs = remote.getGlobal('fs');
+                console.log = remote.getGlobal('log');
+                Vue.SerialPort = Vue.prototype.$SerialPort = SerialPort;
+                _ts.genPorts();
             },
             resetPushData() {
                 this.$set(this, 'pushData', '');
@@ -464,14 +484,47 @@
             },
             readFile() {
                 let _ts = this;
+                let filters = [
+                    { name: 'txt', extensions: ['txt'] }
+                ]
+                _ts.read('loadPushData', filters)
+            },
+            writeFile() {
+                let _ts = this;
+                let filters = [
+                    { name: 'txt', extensions: ['txt'] }
+                ];
+                _ts.write(_ts.pullData, filters);
+            },
+            saveOptions() {
+                let _ts = this;
+                let filters = [{
+                    name: 'json', extensions: ['json']
+                }];
+                let option = {
+                    port: _ts.com,
+                    options: _ts.options
+                }
+                _ts.write(JSON.stringify(option), filters);
+            },
+            loadOptions() {
+                let _ts = this;
+                let filters = [{
+                    name: 'json', extensions: ['json']
+                }];
+                _ts.read('loadOptions', filters);
+            },
+            read(method, filters) {
+                let _ts = this;
                 const { dialog } = window.electron.remote;
                 const win = window.electron.remote.getCurrentWindow();
                 dialog.showOpenDialog(win, {
                     multiSelections: false,
-                    filters: [
-                        { name: 'txt', extensions: ['txt'] }
-                    ]
+                    filters: filters
                 }).then(result => {
+                    if (result.canceled) {
+                        return;
+                    }
                     // 创建可读流
                     let readStream = window.fs.createReadStream(result.filePaths[0], {
                         flags: 'r',       // 设置文件只读模式打开文件
@@ -485,33 +538,37 @@
 
                     // 可读流打开后，会源源不断的触发此事件方法，回调函数参数就是读取的数据。
                     readStream.on('data', data => {
-                        _ts.$set(_ts, 'pushData', data.toString());
+                        if (method === 'loadOptions') {
+                            if (data) {
+                                let option = JSON.parse(data.toString());
+                                _ts.$set(_ts, 'com', option.port);
+                                _ts.$set(_ts, 'options', option.options);
+                            }
+                        } else {
+                            _ts.$set(_ts, 'pushData', data.toString());
+                        }
                     });
 
                     readStream.on('close', () => {
                         console.log('文件可读流结束！');
                     });
-                    _ts.$set(_ts, 'readFilePath', result.filePaths[0]);
                 }).catch(err => {
                     console.log(err)
                 })
             },
-            writeFile() {
-                let _ts = this;
+            write(data, filters) {
                 const { dialog } = window.electron.remote;
                 const win = window.electron.remote.getCurrentWindow();
                 dialog.showSaveDialog(win, {
-                    filters: [
-                        { name: 'txt', extensions: ['txt'] }
-                    ]
+                    filters: filters
                 }).then(result => {
-                    if (!result.filePath) {
+                    if (result.canceled) {
                         return;
                     }
                     // 创建一个可以写入的流，写入到文件 output.txt 中
                     const writerStream = window.fs.createWriteStream(result.filePath);
                     // 使用 utf8 编码写入数据
-                    writerStream.write(_ts.pullData);
+                    writerStream.write(data);
                     // 标记文件末尾
                     writerStream.end();
                     // 处理流事件 --> data, end, and error
@@ -528,36 +585,12 @@
         },
         mounted() {
             let _ts = this;
-            if (window.WebSocket) {
-                let ws = new WebSocket('ws://127.0.0.1:27611');
-
-                ws.onopen = function (e) {
-                    console.log("连接服务器成功", e);
-                    ws.send("HeartBeat");
-                }
-
-                ws.onclose = function (e) {
-                    console.log("服务器关闭", e);
-                }
-
-                ws.onerror = function () {
-                    console.log("连接出错");
-                }
-
-                ws.onmessage = function (e) {
-                    console.log(e.data);
-                    if (e.data === "HeartBeat") {
-                        console.log('客户端接收能力正常');
-                        _ts.genPorts()
-                    }
-                }
-            }
+            setTimeout(function () {
+                _ts.genRenderer();
+            }, 100);
         }
     }
 </script>
 
 <style scoped>
-    .upload-demo {
-        text-align: right;
-    }
 </style>
