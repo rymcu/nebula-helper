@@ -11,12 +11,15 @@ const iconv = require('iconv-lite');
 const log = require('electron-log')
 console.log = log.log
 
+const platform = process.platform;
+
 const fs = require('fs');
 
 global.SerialPort = serialPort;
 global.iconv = iconv;
 global.log = log.log;
 global.fs = fs;
+global.platform = platform;
 
 let menuTemplate = [
     {

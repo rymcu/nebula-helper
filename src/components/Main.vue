@@ -389,11 +389,14 @@
                             }
                             portList.push(port)
                         }
-                        portList.sort(function (port1, port2) {
-                            let s1 = Number(port1.value.replace('COM', ''));
-                            let s2 = Number(port2.value.replace('COM', ''));
-                            return s1 - s2
-                        });
+                        // Windows 系统下进行串口排序
+                        if (/^win/.test(window.platform)) {
+                            portList.sort(function (port1, port2) {
+                                let s1 = Number(port1.value.replace('COM', ''));
+                                let s2 = Number(port2.value.replace('COM', ''));
+                                return s1 - s2
+                            });
+                        }
                         if (portList.length > 0) {
                             _ts.$set(_ts, 'stateText', '初始化成功');
                             if (!_ts.com) {
@@ -430,6 +433,7 @@
                 const SerialPort = remote.getGlobal('SerialPort');
                 window.iconv = remote.getGlobal('iconv');
                 window.fs = remote.getGlobal('fs');
+                window.platform = remote.getGlobal('platform');
                 console.log = remote.getGlobal('log');
                 Vue.SerialPort = Vue.prototype.$SerialPort = SerialPort;
                 _ts.genPorts();
