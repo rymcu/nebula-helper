@@ -265,13 +265,8 @@
             openCom() {
                 let _ts = this
                 let port = _ts.port;
-                if (port && port.isOpen) {
-                    try {
-                        port.close();
-                    } catch (e) {
-                        _ts.$set(_ts, 'stateText', e);
-                        console.log(e);
-                    }
+                if (port) {
+                    _ts.closeCom();
                 }
                 port = new Vue.SerialPort(_ts.com, _ts.options);
 
@@ -334,9 +329,13 @@
             closeCom() {
                 let _ts = this
                 let port = _ts.port;
-                if (port && port.isOpen) {
+                if (port) {
                     try {
-                        port.close();
+                        if (port.isOpen) {
+                            port.close();
+                        } else {
+                            _ts.genPorts();
+                        }
                         _ts.$set(_ts, 'state', 0);
                         _ts.$set(_ts, 'isOpen', false);
                         _ts.$set(_ts, 'stateText', '串口已关闭');
@@ -390,18 +389,19 @@
                             }
                             portList.push(port)
                         }
-                        if (portList) {
-                            _ts.$set(_ts, 'stateText', '初始化成功')
-                        } else {
-                            _ts.$set(_ts, 'stateText', '初始化失败')
-                        }
-                        portList.sort(function (e1, e2) {
-                            let s1 = Number(e1.value.replace('COM', ''));
-                            let s2 = Number(e2.value.replace('COM', ''));
+                        portList.sort(function (port1, port2) {
+                            let s1 = Number(port1.value.replace('COM', ''));
+                            let s2 = Number(port2.value.replace('COM', ''));
                             return s1 - s2
                         });
-                        if (portList) {
-                            _ts.$set(_ts, 'com', portList[0].value)
+                        if (portList.length > 0) {
+                            _ts.$set(_ts, 'stateText', '初始化成功');
+                            if (!_ts.com) {
+                                _ts.$set(_ts, 'com', portList[0].value);
+                            }
+                        } else {
+                            _ts.$set(_ts, 'stateText', '未获取到串口信息');
+                            _ts.$set(_ts, 'com', '');
                         }
                         _ts.$set(_ts, 'ports', portList)
                     },
