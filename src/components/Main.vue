@@ -65,7 +65,7 @@
                         <el-checkbox v-model="hexDisplay">十六进制显示</el-checkbox>
                     </el-col>
                     <el-col :span="12">
-                        <el-button>接收转向文件</el-button>
+                        <el-button @click="writeFile">接收转向文件</el-button>
                     </el-col>
                 </el-form-item>
             </el-form>
@@ -75,45 +75,32 @@
                         <template slot="prepend">自动发送周期</template>
                         <template slot="append">毫秒</template>
                     </el-input>
-                    <el-checkbox v-model="autoSend" @change="autoSendData">自动发送</el-checkbox>
-                    <el-checkbox v-model="hexSend">十六进制发送</el-checkbox>
-                    <el-upload
-                            class="upload-demo"
-                            ref="upload"
-                            action="https://jsonplaceholder.typicode.com/posts/"
-                            :on-exceed="handleExceed"
-                            :file-list="fileList"
-                            :on-change="handleBeforeUpload"
-                            :limit="1"
-                            accept="txt"
-                            :auto-upload="false">
-                        <el-button slot="trigger" size="small" type="primary">选取文件</el-button>
-                    </el-upload>
+                    <el-checkbox v-model="autoSend" @change="autoSendData" style="margin-top: 1rem;">自动发送</el-checkbox>
+                    <el-checkbox v-model="hexSend" style="margin-top: 1rem;">十六进制发送</el-checkbox>
                 </el-form-item>
             </el-form>
         </el-aside>
         <el-main style="padding: 0 20px 0 0;">
             <el-form v-model="com">
                 <el-form-item>
-                    <el-input id="pullDta" type="textarea" v-model="pullData" :autosize="{ minRows: 16, maxRows: 16}" readonly></el-input>
+                    <el-input id="pullDta" type="textarea" v-model="pullData" :rows="16" readonly></el-input>
                 </el-form-item>
                 <el-form-item>
                     <el-input type="textarea" v-model="pushData" :rows="9"></el-input>
                 </el-form-item>
                 <el-form-item style="text-align: right;">
+                    <el-button type="text" style="margin-right: 1rem;"><span style="color: red;">{{stateText}}</span>
+                    </el-button>
+                    <el-button type="text" style="margin-right: 1rem;"><span style="color: black;">发送字节数:</span>
+                        {{pushBit}}
+                    </el-button>
+                    <el-button type="text" style="margin-right: 1rem;"><span style="color: black;">接收字节数:</span>
+                        {{pullBit}}
+                    </el-button>
+                    <el-button @click="readFile">读取文件</el-button>
                     <el-button @click="resetPushData">清空重填</el-button>
                     <el-button @click="portWrite">手动发送</el-button>
                     <el-button @click="resetCountBit">计数清零</el-button>
-                </el-form-item>
-                <el-form-item>
-                    <el-button type="text" style="margin-right: 5rem;"><span style="color: red;">{{stateText}}</span>
-                    </el-button>
-                    <el-button type="text" style="margin-right: 5rem;"><span style="color: black;">发送字节数:</span>
-                        {{pushBit}}
-                    </el-button>
-                    <el-button type="text" style="margin-right: 5rem;"><span style="color: black;">接收字节数:</span>
-                        {{pullBit}}
-                    </el-button>
                 </el-form-item>
             </el-form>
         </el-main>
@@ -127,34 +114,32 @@
         name: 'Main',
         data() {
             return {
-                timer: null,
-                buffer: new Buffer(''),
-                port: null,
-                isOpen: false,
-                isShowPullDate: true,
-                labelPosition: 'right',
-                state: 0,
-                com: '',
-                pullData: '',
-                pushData: '',
-                fileList: [],
-                isGbk: false,
-                stateText: '准备就绪',
-                pushBit: 0,
-                pullBit: 0,
-                autoSendRate: 1000,
-                autoClean: false,
-                hexDisplay: false,
-                autoSend: false,
-                hexSend: false,
-                options: {
+                timer: null,    // 定时器
+                port: null, // 串口实体
+                isOpen: false,  // 串口打开状态
+                isShowPullDate: true,   // 是否显示
+                labelPosition: 'right', // 对齐方式
+                state: 0,   // 串口状态 0: 未打开, 1: 打开
+                com: '',    // 串口路径 COM1
+                pullData: '',   // 接收到的数据
+                pushData: '',   // 发送的数据
+                readFilePath: '',   // 读取文件路径
+                stateText: '准备就绪',  // 状态提示
+                pushBit: 0, // 发送字节数
+                pullBit: 0, // 接收字节数
+                autoSendRate: 1000, // 自动发送频率 ms
+                autoClean: false,   // 自动清空
+                hexDisplay: false,  // 16 进制显示
+                autoSend: false,    // 自动发送状态
+                hexSend: false, // 16 进制发送
+                options: {  // 串口配置信息
                     baudRate: 9600,
                     parity: 'none',
                     dataBits: 8,
                     stopBits: 1,
                     autoOpen: false
                 },
-                ports: [],
+                ports: [],  // 本机串口列表
                 baudRateList: [
                     {
                         label: '300',
@@ -326,8 +311,8 @@
                     // 判断是否显示接收的数据
                     if (_ts.isShowPullDate) {
                         let pullData;
-                        if (_ts.isGbk) {
-                            let encoding = 'gbk';
+                        if (_ts.isGBK(data)) {
+                            let encoding = 'GB2312';
                             pullData = window.iconv.decode(data, encoding);
                         } else {
                             if (_ts.hexDisplay) {
@@ -368,10 +353,14 @@
                 let port = _ts.port;
                 if (port && port.isOpen && _ts.pushData) {
                     let encoding = 'utf-8';
+                    let pushData;
                     if (_ts.hexSend) {
                         encoding = 'hex';
+                        pushData = _ts.pushData;
+                    } else {
+                        pushData = window.iconv.encode(_ts.pushData, 'GB2312');
                     }
-                    port.write(_ts.pushData, encoding, function (err, result) {
+                    port.write(pushData, encoding, function (err, result) {
                         if (err) {
                             console.log('Error while sending message : ' + err);
                         }
@@ -389,22 +378,12 @@
                     })
                 }
             },
-            handleExceed(files) {
-                let fileList = [{
-                    name: files[0].name,
-                    size: files[0].size,
-                    raw: files[0]
-                }];
-                this.$set(this, 'fileList', fileList);
-            },
-            handleBeforeUpload(file, fileList) {
-                this.$set(this, 'fileList', fileList);
-            },
             genPorts() {
                 let _ts = this;
                 let remote = window.electron.remote;
                 const SerialPort = remote.getGlobal('SerialPort');
-                window.icovn = remote.getGlobal('icovn');
+                window.iconv = remote.getGlobal('iconv');
+                window.fs = remote.getGlobal('fs');
                 console.log = remote.getGlobal('log');
                 Vue.SerialPort = Vue.prototype.$SerialPort = SerialPort;
                 SerialPort.list().then(
@@ -455,13 +434,10 @@
                     }, _ts.autoSendRate);
                 }
             },
-            strToBinary(str, binary){
+            strToBinary(str, binary) {
                 let result = [];
                 let list = str.split("");
-                for(let i=0;i<list.length;i++){
-                    // if(i != 0){
-                    //     result.push(" ");
-                    // }
+                for (let i = 0; i < list.length; i++) {
                     let item = list[i];
                     let data = item.charCodeAt(0).toString(binary);
                     result.push(data);
@@ -471,6 +447,83 @@
             resetCountBit() {
                 this.$set(this, 'pushBit', 0);
                 this.$set(this, 'pullBit', 0);
+            },
+            isGBK(data) {
+                if (data[0] == 0xff && data[1] == 0xfe) {
+                    console.log('unicode');
+                    return false;
+                } else if (data[0] == 0xfe && data[1] == 0xff) {
+                    console.log('unicode');
+                    return false;
+                } else if (data[0] == 0xef && data[1] == 0xbb) {
+                    console.log('utf8');
+                    return false;
+                } else {
+                    return true;
+                }
+            },
+            readFile() {
+                let _ts = this;
+                const { dialog } = window.electron.remote;
+                const win = window.electron.remote.getCurrentWindow();
+                dialog.showOpenDialog(win, {
+                    multiSelections: false,
+                    filters: [
+                        { name: 'txt', extensions: ['txt'] }
+                    ]
+                }).then(result => {
+                    // 创建可读流
+                    let readStream = window.fs.createReadStream(result.filePaths[0], {
+                        flags: 'r',       // 设置文件只读模式打开文件
+                        encoding: 'utf8'  // 设置读取文件的内容的编码
+                    });
+
+                    // 打开文件流的事件。
+                    readStream.on('open', fd => {
+                        console.log('文件可读流已打开，句柄：%s', fd);
+                    });
+
+                    // 可读流打开后，会源源不断的触发此事件方法，回调函数参数就是读取的数据。
+                    readStream.on('data', data => {
+                        _ts.$set(_ts, 'pushData', data.toString());
+                    });
+
+                    readStream.on('close', () => {
+                        console.log('文件可读流结束！');
+                    });
+                    _ts.$set(_ts, 'readFilePath', result.filePaths[0]);
+                }).catch(err => {
+                    console.log(err)
+                })
+            },
+            writeFile() {
+                let _ts = this;
+                const { dialog } = window.electron.remote;
+                const win = window.electron.remote.getCurrentWindow();
+                dialog.showSaveDialog(win, {
+                    filters: [
+                        { name: 'txt', extensions: ['txt'] }
+                    ]
+                }).then(result => {
+                    if (!result.filePath) {
+                        return;
+                    }
+                    // 创建一个可以写入的流，写入到文件 output.txt 中
+                    const writerStream = window.fs.createWriteStream(result.filePath);
+                    // 使用 utf8 编码写入数据
+                    writerStream.write(_ts.pullData);
+                    // 标记文件末尾
+                    writerStream.end();
+                    // 处理流事件 --> data, end, and error
+                    writerStream.on('finish', function() {
+                        console.log("写入完成。");
+                    });
+                    writerStream.on('error', function(err){
+                        console.log(err.stack);
+                    });
+                }).catch(err => {
+                    console.log(err)
+                })
             }
         },
         mounted() {

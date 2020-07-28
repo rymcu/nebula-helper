@@ -9,10 +9,12 @@ const WebSocket = require('ws');
 const WebSocketServer = WebSocket.Server;
 let wss;    //webSocket Server
 const serialPort = require('serialport');
-const icovn = require('iconv-lite');
+const iconv = require('iconv-lite');
 
 const log = require('electron-log')
 console.log = log.log
+
+const fs = require('fs');
 
 function startPort() {
   if (wss) {
@@ -110,8 +112,10 @@ app.on('ready', async () => {
     }
   }
   global.SerialPort = serialPort;
-  global.icovn = icovn;
+  global.iconv = iconv;
   global.log = log.log;
+  global.fs = fs;
+  global.win = win;
   createWindow()
 })
 
