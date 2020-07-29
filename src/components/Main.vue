@@ -34,72 +34,80 @@
                 </el-form-item>
                 <el-form-item v-if="state == 0">
                     <el-col :span="10">
-                        <el-button type="info" circle icon="el-icon-switch-button"></el-button>
+                        <el-button :size="buttonSize" type="info" circle icon="el-icon-switch-button"></el-button>
                     </el-col>
                     <el-col :span="10">
-                        <el-button @click="openCom">打开串口</el-button>
+                        <el-button :size="buttonSize" @click="openCom">打开串口</el-button>
                     </el-col>
                 </el-form-item>
                 <el-form-item v-else>
                     <el-col :span="10">
-                        <el-button type="success" circle icon="el-icon-switch-button"></el-button>
+                        <el-button :size="buttonSize" type="success" circle icon="el-icon-switch-button"></el-button>
                     </el-col>
                     <el-col :span="10">
-                        <el-button @click="closeCom">关闭串口</el-button>
+                        <el-button :size="buttonSize" @click="closeCom">关闭串口</el-button>
                     </el-col>
                 </el-form-item>
             </el-form>
             <el-form>
                 <el-form-item>
-                    <el-col :span="12">
-                        <el-button @click="resetPullData">清空接收区</el-button>
+                    <el-col :span="8">
+                        <el-button :size="buttonSize" @click="resetPullData">清空接收区</el-button>
                     </el-col>
-                    <el-col :span="12">
-                        <el-button v-if="isShowPullDate" @click="updateShowPullDate">停止显示</el-button>
-                        <el-button v-else @click="updateShowPullDate">恢复显示</el-button>
+                    <el-col :span="8">
+                        <el-button :size="buttonSize" v-if="isShowPullDate" @click="updateShowPullDate">停止显示</el-button>
+                        <el-button :size="buttonSize" v-else @click="updateShowPullDate">恢复显示</el-button>
+                    </el-col>
+                    <el-col :span="8">
+                        <el-button :size="buttonSize" @click="writeFile">保存接收数据</el-button>
                     </el-col>
                 </el-form-item>
                 <el-form-item>
                     <el-col :span="12">
                         <el-checkbox v-model="autoClean">自动清空</el-checkbox>
-                        <el-checkbox v-model="hexDisplay">十六进制显示</el-checkbox>
                     </el-col>
                     <el-col :span="12">
-                        <el-button @click="writeFile">保存接收数据</el-button>
+                        <el-checkbox v-model="hexDisplay">十六进制显示</el-checkbox>
                     </el-col>
                 </el-form-item>
             </el-form>
-            <el-form>
+            <el-form style="align-items: center;">
                 <el-form-item>
-                    <el-input type="number" v-model="autoSendRate">
-                        <template slot="prepend">自动发送周期</template>
-                        <template slot="append">毫秒</template>
-                    </el-input>
-                    <el-checkbox v-model="autoSend" @change="autoSendData" style="margin-top: 1rem;">自动发送</el-checkbox>
-                    <el-checkbox v-model="hexSend" style="margin-top: 1rem;">十六进制发送</el-checkbox>
+                    <span style="margin-right: 1rem;"><span style="color: red;">{{stateText}}</span></span>
+                    <el-button :size="buttonSize" type="text" style="margin-right: 1rem;"><span style="color: black;">发送字节数:</span>
+                        {{pushBit}}
+                    </el-button>
+                    <el-button :size="buttonSize" type="text" style="margin-right: 1rem;"><span style="color: black;">接收字节数:</span>
+                        {{pullBit}}
+                    </el-button>
                 </el-form-item>
             </el-form>
         </el-aside>
         <el-main style="padding: 0 20px 0 0;">
             <el-form v-model="com">
                 <el-form-item>
-                    <el-input id="pullDta" type="textarea" v-model="pullData" :rows="16" readonly></el-input>
+                    <el-input id="pullDta" type="textarea" resize="none" placeholder="显示区" v-model="pullData" :rows="10" readonly></el-input>
                 </el-form-item>
                 <el-form-item>
-                    <el-input type="textarea" v-model="pushData" :rows="9" @input="hexRegExp"></el-input>
+                    <el-input type="textarea" resize="none" placeholder="输入区" v-model="pushData" :rows="4" @input="hexRegExp"></el-input>
+                </el-form-item>
+                <el-form-item>
+                    <el-col :span="24" style="margin-top: 1rem;">
+                        <el-input type="number" v-model="autoSendRate">
+                            <template slot="prepend">自动发送周期</template>
+                            <template slot="append">毫秒</template>
+                        </el-input>
+                    </el-col>
+                    <el-col :span="12">
+                        <el-checkbox v-model="autoSend" @change="autoSendData" style="margin-top: 1rem;">自动发送</el-checkbox>
+                    </el-col>
+                    <el-checkbox v-model="hexSend" style="margin-top: 1rem;">十六进制发送</el-checkbox>
                 </el-form-item>
                 <el-form-item style="text-align: right;">
-                    <span style="margin-right: 1rem;"><span style="color: red;">{{stateText}}</span></span>
-                    <el-button type="text" style="margin-right: 1rem;"><span style="color: black;">发送字节数:</span>
-                        {{pushBit}}
-                    </el-button>
-                    <el-button type="text" style="margin-right: 1rem;"><span style="color: black;">接收字节数:</span>
-                        {{pullBit}}
-                    </el-button>
-                    <el-button @click="readFile">读取文件</el-button>
-                    <el-button @click="resetPushData">清空重填</el-button>
-                    <el-button @click="portWrite">手动发送</el-button>
-                    <el-button @click="resetCountBit">计数清零</el-button>
+                    <el-button :size="buttonSize" @click="readFile">读取文件</el-button>
+                    <el-button :size="buttonSize" @click="resetPushData">清空重填</el-button>
+                    <el-button :size="buttonSize" @click="portWrite">手动发送</el-button>
+                    <el-button :size="buttonSize" @click="resetCountBit">计数清零</el-button>
                 </el-form-item>
             </el-form>
         </el-main>
@@ -121,6 +129,7 @@
         },
         data() {
             return {
+                buttonSize: 'small',
                 timer: null,    // 定时器
                 port: null, // 串口实体
                 isOpen: false,  // 串口打开状态
