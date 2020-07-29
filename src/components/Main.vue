@@ -86,11 +86,10 @@
                     <el-input id="pullDta" type="textarea" v-model="pullData" :rows="16" readonly></el-input>
                 </el-form-item>
                 <el-form-item>
-                    <el-input type="textarea" v-model="pushData" :rows="9"></el-input>
+                    <el-input type="textarea" v-model="pushData" :rows="9" @input="hexRegExp"></el-input>
                 </el-form-item>
                 <el-form-item style="text-align: right;">
-                    <el-button type="text" style="margin-right: 1rem;"><span style="color: red;">{{stateText}}</span>
-                    </el-button>
+                    <span style="margin-right: 1rem;"><span style="color: red;">{{stateText}}</span></span>
                     <el-button type="text" style="margin-right: 1rem;"><span style="color: black;">发送字节数:</span>
                         {{pushBit}}
                     </el-button>
@@ -314,7 +313,7 @@
                     if (_ts.isShowPullDate) {
                         let pullData;
                         if (_ts.hexDisplay) {
-                            pullData = _ts.strToBinary(data.toString(), 16).toLocaleUpperCase();
+                            pullData = _ts.handlerHexDisplay(data.toString('hex').toLocaleUpperCase());
                         } else {
                             if (_ts.isGBK(data)) {
                                 let encoding = 'GB2312';
@@ -363,7 +362,7 @@
                     let pushData;
                     if (_ts.hexSend) {
                         encoding = 'hex';
-                        pushData = _ts.pushData;
+                        pushData = _ts.handlerHex(_ts.pushData);
                     } else {
                         pushData = window.iconv.encode(_ts.pushData, 'GB2312');
                     }
@@ -503,14 +502,14 @@
             readFile() {
                 let _ts = this;
                 let filters = [
-                    { name: 'txt', extensions: ['txt'] }
+                    {name: 'txt', extensions: ['txt']}
                 ]
-                _ts.read('读取文件','loadPushData', filters)
+                _ts.read('读取文件', 'loadPushData', filters)
             },
             writeFile() {
                 let _ts = this;
                 let filters = [
-                    { name: 'txt', extensions: ['txt'] }
+                    {name: 'txt', extensions: ['txt']}
                 ];
                 _ts.write('保存接收数据', _ts.pullData, filters);
             },
@@ -523,18 +522,18 @@
                     port: _ts.com,
                     options: _ts.options
                 }
-                _ts.write('保存配置信息',JSON.stringify(option), filters);
+                _ts.write('保存配置信息', JSON.stringify(option), filters);
             },
             loadOptions() {
                 let _ts = this;
                 let filters = [{
                     name: 'json', extensions: ['json']
                 }];
-                _ts.read('加载配置信息','loadOptions', filters);
+                _ts.read('加载配置信息', 'loadOptions', filters);
             },
             read(title, method, filters) {
                 let _ts = this;
-                const { dialog } = window.electron.remote;
+                const {dialog} = window.electron.remote;
                 const win = window.electron.remote.getCurrentWindow();
                 dialog.showOpenDialog(win, {
                     title: title,
@@ -576,7 +575,7 @@
                 })
             },
             write(title, data, filters) {
-                const { dialog } = window.electron.remote;
+                const {dialog} = window.electron.remote;
                 const win = window.electron.remote.getCurrentWindow();
                 dialog.showSaveDialog(win, {
                     title: title,
@@ -592,15 +591,78 @@
                     // 标记文件末尾
                     writerStream.end();
                     // 处理流事件 --> data, end, and error
-                    writerStream.on('finish', function() {
+                    writerStream.on('finish', function () {
                         console.log("写入完成。");
                     });
-                    writerStream.on('error', function(err){
+                    writerStream.on('error', function (err) {
                         console.log(err.stack);
                     });
                 }).catch(err => {
                     console.log(err)
                 })
+            },
+            handlerHex(data) {
+                let dataStr = '';
+                let hexArr = data.trim().split(' ');
+                for(let i in hexArr) {
+                    if (hexArr[i].length == 1) {
+                        dataStr += '0';
+                    }
+                    dataStr += hexArr[i];
+                }
+                return dataStr;
+            },
+            handlerHexDisplay(data) {
+                console.log(data)
+                let dataStr = '';
+                let isOdd = true;
+                if (data.length % 2 == 0) {
+                    isOdd = false;
+                }
+                for (let i = 0, len = data.length; i < len; i++) {
+                    // 自动补零
+                    if (isOdd && len - i == 1) {
+                        dataStr += '0';
+                    }
+                    // 字符拼接
+                    dataStr += data.charAt(i);
+                    // 每两个字符加一个空格
+                    if (i % 2 > 0 || len - i == 1) {
+                        dataStr += ' ';
+                    }
+                }
+                return dataStr;
+            },
+            hexRegExp(value) {
+                if (!this.hexSend) {
+                    return;
+                }
+                let _ts = this;
+                let reg = /^[0-9a-fA-F]*$/
+                if (value.indexOf(' ') > -1) {
+                    const hexArr = value.split(' ');
+                    for (let i in hexArr) {
+                        if (hexArr[i].length > 2) {
+                            _ts.$set(_ts, 'stateText', '非法 16 进制值');
+                            return;
+                        } else {
+                            if (!reg.test(hexArr[i])) {
+                                _ts.$set(_ts, 'pushData', value.substring(0, value.length - 1));
+                                _ts.$set(_ts, 'stateText', '非法 16 进制值');
+                                return;
+                            }
+                        }
+                    }
+                } else {
+                    if (!reg.test(value)) {
+                        _ts.$set(_ts, 'pushData', value.substring(0, value.length - 1));
+                        _ts.$set(_ts, 'stateText', '非法 16 进制值');
+                        return;
+                    }
+                }
+
+                _ts.$set(_ts, 'pushData', value.toLocaleUpperCase());
+                _ts.$set(_ts, 'stateText', '');
             }
         },
         mounted() {
