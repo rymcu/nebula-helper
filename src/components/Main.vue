@@ -584,10 +584,7 @@
             }
         },
         mounted() {
-            let _ts = this;
-            setTimeout(function () {
-                _ts.genRenderer();
-            }, 100);
+            this.genRenderer();
         }
     }
 </script>
