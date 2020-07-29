@@ -1,5 +1,6 @@
 # Nebula Helper
-> 一款现代化的串口调试助手
+> 使用 Vue + Electron + node-serialport 实现的现代串行端口调试助手  
+  A modern serial port debugging assistant implemented using Vue + Electron + node-serialport
 ## 功能特性
 - [x] 基础串口通信
 - [x] 自动发送信息
