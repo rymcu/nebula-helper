@@ -66,7 +66,7 @@ let menuTemplate = [
         role: 'viewMenu',
         submenu: [
             {
-                label: '刷新串口列表',
+                label: '刷新端口列表',
                 accelerator: 'Ctrl + R',
                 click: function () {
                     win.webContents.send('reloadPorts');
@@ -107,7 +107,7 @@ function createWindow() {
     // Create the browser window.
     win = new BrowserWindow({
         width: 800,
-        height: 640,
+        height: 600,
         resizable: false,
         webPreferences: {
             // Use pluginOptions.nodeIntegration, leave this alone

@@ -74,12 +74,6 @@
             <el-form style="align-items: center;">
                 <el-form-item>
                     <span style="margin-right: 1rem;"><span style="color: red;">{{stateText}}</span></span>
-                    <el-button :size="buttonSize" type="text" style="margin-right: 1rem;"><span style="color: black;">发送字节数:</span>
-                        {{pushBit}}
-                    </el-button>
-                    <el-button :size="buttonSize" type="text" style="margin-right: 1rem;"><span style="color: black;">接收字节数:</span>
-                        {{pullBit}}
-                    </el-button>
                 </el-form-item>
             </el-form>
         </el-aside>
@@ -100,14 +94,24 @@
                     </el-col>
                     <el-col :span="12">
                         <el-checkbox v-model="autoSend" @change="autoSendData" style="margin-top: 1rem;">自动发送</el-checkbox>
+                        <el-checkbox v-model="hexSend" style="margin-top: 1rem;">十六进制发送</el-checkbox>
                     </el-col>
-                    <el-checkbox v-model="hexSend" style="margin-top: 1rem;">十六进制发送</el-checkbox>
+                    <el-col :span="6" style="padding-top: 1rem;">
+                        <span :size="buttonSize" type="text" style="margin-right: 1rem;">
+                            Tx: {{pushBit}}
+                        </span>
+                    </el-col>
+                    <el-col :span="6" style="padding-top: 1rem;">
+                        <span :size="buttonSize" type="text" style="margin-right: 1rem;">
+                            Rx: {{pullBit}}
+                        </span>
+                    </el-col>
                 </el-form-item>
                 <el-form-item style="text-align: right;">
                     <el-button :size="buttonSize" @click="readFile">读取文件</el-button>
                     <el-button :size="buttonSize" @click="resetPushData">清空重填</el-button>
-                    <el-button :size="buttonSize" @click="portWrite">手动发送</el-button>
                     <el-button :size="buttonSize" @click="resetCountBit">计数清零</el-button>
+                    <el-button :size="buttonSize" @click="portWrite">手动发送</el-button>
                 </el-form-item>
             </el-form>
         </el-main>
