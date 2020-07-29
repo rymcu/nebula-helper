@@ -24,15 +24,39 @@ let menuTemplate = [
         role: 'fileMenu',
         submenu: [
             {
-                label: '保存配置',
+                label: '保存接收数据',
+                accelerator: 'Ctrl + S',
+                click: function () {
+                    win.webContents.send('writeFile');
+                }
+            },
+            {
+                label: '读取文件数据',
+                accelerator: 'Ctrl + L',
+                click: function () {
+                    win.webContents.send('readFile');
+                }
+            }
+            ,
+            {
+                label: '保存配置信息',
+                accelerator: 'Ctrl + 1',
                 click: function () {
                     win.webContents.send('saveOptions');
                 }
             },
             {
-                label: '加载配置',
+                label: '加载配置文件',
+                accelerator: 'Ctrl + 2',
                 click: function () {
                     win.webContents.send('loadOptions');
+                }
+            },
+            {
+                label: '关闭',
+                accelerator: 'Ctrl + W',
+                click: function () {
+                    app.quit();
                 }
             }
         ]
@@ -43,6 +67,7 @@ let menuTemplate = [
         submenu: [
             {
                 label: '刷新串口列表',
+                accelerator: 'Ctrl + R',
                 click: function () {
                     win.webContents.send('reloadPorts');
                 }
@@ -52,6 +77,7 @@ let menuTemplate = [
     {
         label: '帮助',
         role: 'help',
+        accelerator: 'Ctrl + H',
         submenu: [
             {
                 label: '问题反馈',
