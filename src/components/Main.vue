@@ -65,13 +65,13 @@
                         <el-checkbox v-model="hexDisplay">十六进制显示</el-checkbox>
                     </el-col>
                     <el-col :span="12">
-                        <el-button @click="writeFile">接收转向文件</el-button>
+                        <el-button @click="writeFile">保存接收数据</el-button>
                     </el-col>
                 </el-form-item>
             </el-form>
             <el-form>
                 <el-form-item>
-                    <el-input v-model="autoSendRate">
+                    <el-input type="number" v-model="autoSendRate">
                         <template slot="prepend">自动发送周期</template>
                         <template slot="append">毫秒</template>
                     </el-input>
@@ -112,6 +112,14 @@
 
     export default {
         name: 'Main',
+        watch: {
+            autoSendRate(val) {
+                let _ts = this;
+                if (val > 0) {
+                    _ts.autoSendData(_ts.autoSend);
+                }
+            }
+        },
         data() {
             return {
                 timer: null,    // 定时器
@@ -426,6 +434,16 @@
                         _ts.genPorts();
                     }
                 });
+                ipcRenderer.on('writeFile', (event) => {
+                    if (event) {
+                        _ts.writeFile();
+                    }
+                });
+                ipcRenderer.on('readFile', (event) => {
+                    if (event) {
+                        _ts.readFile();
+                    }
+                });
                 let remote = window.electron.remote;
                 const SerialPort = remote.getGlobal('SerialPort');
                 window.iconv = remote.getGlobal('iconv');
@@ -487,14 +505,14 @@
                 let filters = [
                     { name: 'txt', extensions: ['txt'] }
                 ]
-                _ts.read('loadPushData', filters)
+                _ts.read('读取文件','loadPushData', filters)
             },
             writeFile() {
                 let _ts = this;
                 let filters = [
                     { name: 'txt', extensions: ['txt'] }
                 ];
-                _ts.write(_ts.pullData, filters);
+                _ts.write('保存接收数据', _ts.pullData, filters);
             },
             saveOptions() {
                 let _ts = this;
@@ -505,20 +523,21 @@
                     port: _ts.com,
                     options: _ts.options
                 }
-                _ts.write(JSON.stringify(option), filters);
+                _ts.write('保存配置信息',JSON.stringify(option), filters);
             },
             loadOptions() {
                 let _ts = this;
                 let filters = [{
                     name: 'json', extensions: ['json']
                 }];
-                _ts.read('loadOptions', filters);
+                _ts.read('加载配置信息','loadOptions', filters);
             },
-            read(method, filters) {
+            read(title, method, filters) {
                 let _ts = this;
                 const { dialog } = window.electron.remote;
                 const win = window.electron.remote.getCurrentWindow();
                 dialog.showOpenDialog(win, {
+                    title: title,
                     multiSelections: false,
                     filters: filters
                 }).then(result => {
@@ -556,10 +575,11 @@
                     console.log(err)
                 })
             },
-            write(data, filters) {
+            write(title, data, filters) {
                 const { dialog } = window.electron.remote;
                 const win = window.electron.remote.getCurrentWindow();
                 dialog.showSaveDialog(win, {
+                    title: title,
                     filters: filters
                 }).then(result => {
                     if (result.canceled) {
