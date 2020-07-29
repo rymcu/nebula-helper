@@ -138,6 +138,7 @@
                 hexDisplay: false,  // 16 进制显示
                 autoSend: false,    // 自动发送状态
                 hexSend: false, // 16 进制发送
+                sendState: false, // 16 进制发送
                 options: {  // 串口配置信息
                     baudRate: 9600,
                     parity: 'none',
@@ -361,6 +362,9 @@
                     let encoding = 'utf-8';
                     let pushData;
                     if (_ts.hexSend) {
+                        if (!_ts.sendState) {
+                            return;
+                        }
                         encoding = 'hex';
                         pushData = _ts.handlerHex(_ts.pushData);
                     } else {
@@ -602,18 +606,22 @@
                 })
             },
             handlerHex(data) {
+                let _ts = this;
                 let dataStr = '';
-                let hexArr = data.trim().split(' ');
-                for(let i in hexArr) {
-                    if (hexArr[i].length == 1) {
-                        dataStr += '0';
+                if (data.trim().indexOf(' ') > -1) {
+                    let hexArr = data.trim().split(' ');
+                    for(let i in hexArr) {
+                        if (hexArr[i].length == 1) {
+                            dataStr += '0';
+                        }
+                        dataStr += hexArr[i];
                     }
-                    dataStr += hexArr[i];
+                } else {
+                    dataStr = _ts.handlerHexDisplay(data.trim());
                 }
-                return dataStr;
+                return dataStr.replace(/\s+/g,'');
             },
             handlerHexDisplay(data) {
-                console.log(data)
                 let dataStr = '';
                 let isOdd = true;
                 if (data.length % 2 == 0) {
@@ -643,10 +651,12 @@
                     const hexArr = value.split(' ');
                     for (let i in hexArr) {
                         if (hexArr[i].length > 2) {
+                            _ts.$set(_ts, 'sendState', false);
                             _ts.$set(_ts, 'stateText', '非法 16 进制值');
                             return;
                         } else {
                             if (!reg.test(hexArr[i])) {
+                                _ts.$set(_ts, 'sendState', false);
                                 _ts.$set(_ts, 'pushData', value.substring(0, value.length - 1));
                                 _ts.$set(_ts, 'stateText', '非法 16 进制值');
                                 return;
@@ -655,6 +665,7 @@
                     }
                 } else {
                     if (!reg.test(value)) {
+                        _ts.$set(_ts, 'sendState', false);
                         _ts.$set(_ts, 'pushData', value.substring(0, value.length - 1));
                         _ts.$set(_ts, 'stateText', '非法 16 进制值');
                         return;
@@ -663,6 +674,7 @@
 
                 _ts.$set(_ts, 'pushData', value.toLocaleUpperCase());
                 _ts.$set(_ts, 'stateText', '');
+                _ts.$set(_ts, 'sendState', true);
             }
         },
         mounted() {
